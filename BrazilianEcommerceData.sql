@@ -4,6 +4,19 @@ SELECT
 FROM
 	Brazilian_Ecommerce_Data.dbo.olist_customers_dataset
 
+--About payments
+SELECT
+	*
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_order_payments_dataset
+
+--About reviews
+SELECT
+	DISTINCT
+	review_comment_message
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_order_reviews_dataset
+
 --***********************************************************************************************************************************
 --How many customers do we have?
 --***********************************************************************************************************************************
@@ -12,6 +25,44 @@ SELECT
 	COUNT(customer_id) as CustomerCount
 FROM
 	Brazilian_Ecommerce_Data.dbo.olist_customers_dataset
+
+--***********************************************************************************************************************************
+-- Which payment method is used more often?
+--***********************************************************************************************************************************
+SELECT
+	payment_type,
+	COUNT(payment_type) AS payment_type_count,
+	FORMAT(CAST(COUNT(payment_type) AS FLOAT)/CAST((SELECT COUNT(payment_type) FROM Brazilian_Ecommerce_Data.dbo.olist_order_payments_dataset) AS FLOAT),'P') AS '%ofTotal'
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_order_payments_dataset
+GROUP BY
+	payment_type
+ORDER BY
+	COUNT(payment_type) DESC
+--***********************************************************************************************************************************
+-- How many orders have complains about stolen orders?
+--***********************************************************************************************************************************
+SELECT
+	DISTINCT
+	review_comment_message
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_order_reviews_dataset
+WHERE
+	review_comment_message LIKE '%roub%' OR review_comment_message LIKE '%assal%'  
+
+--***********************************************************************************************************************************
+-- In how many installments custmers usually pay?
+--***********************************************************************************************************************************
+SELECT
+	ROUND(AVG(payment_installments),2) AS payment_installments_avg,
+	payment_type
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_order_payments_dataset
+WHERE
+	payment_type = 'credit_card'
+GROUP BY
+	payment_type
+
 
 --***********************************************************************************************************************************
 -- Which state of Brazil has more customers?
@@ -27,20 +78,6 @@ GROUP BY
 	customer_state
 ORDER BY
 	COUNT(customer_id) DESC
-
---***********************************************************************************************************************************
--- Which payment method is used more often?
---***********************************************************************************************************************************
-SELECT
-	payment_type,
-	COUNT(payment_type) AS payment_type_count,
-	FORMAT(CAST(COUNT(payment_type) AS FLOAT)/CAST((SELECT COUNT(payment_type) FROM Brazilian_Ecommerce_Data.dbo.olist_order_payments_dataset) AS FLOAT),'P') AS '%ofTotal'
-FROM
-	Brazilian_Ecommerce_Data.dbo.olist_order_payments_dataset
-GROUP BY
-	payment_type
-ORDER BY
-	COUNT(payment_type) DESC
 
 --***********************************************************************************************************************************
 -- Which state of Brazil has more orders?
