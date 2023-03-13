@@ -12,10 +12,10 @@ FROM
 
 --About reviews
 SELECT
-	DISTINCT
-	review_comment_message
+	*
 FROM
 	Brazilian_Ecommerce_Data.dbo.olist_order_reviews_dataset
+
 
 --***********************************************************************************************************************************
 --How many customers do we have?
@@ -43,12 +43,75 @@ ORDER BY
 -- How many orders have complains about stolen orders?
 --***********************************************************************************************************************************
 SELECT
-	DISTINCT
-	review_comment_message
+	od.order_id,
+	cd.customer_city,
+	cd.customer_state,
+	rd.review_comment_message
 FROM
-	Brazilian_Ecommerce_Data.dbo.olist_order_reviews_dataset
+	Brazilian_Ecommerce_Data.dbo.olist_order_reviews_dataset rd
+LEFT JOIN
+	Brazilian_Ecommerce_Data.dbo.olist_orders_dataset od
+ON
+	rd.order_id = od.order_id
+LEFT JOIN
+	Brazilian_Ecommerce_Data.dbo.olist_customers_dataset cd
+ON
+	cd.customer_id = od.customer_id
 WHERE
-	review_comment_message LIKE '%roub%' OR review_comment_message LIKE '%assal%'  
+	rd.review_comment_message LIKE '%roub%' 
+	OR rd.review_comment_message LIKE '%assal%' 
+	AND rd.review_comment_message IS NOT NULL
+	AND od.order_id NOT IN ('14be6c27cfb9d577528738b7bb45139e','a5a854651cfe0d8da9f1669266fd4063')
+ORDER BY
+	cd.customer_state DESC
+
+--***********************************************************************************************************************************
+-- What's the proportion of stolen orders per state?
+--***********************************************************************************************************************************
+WITH cte_orders_per_state AS (
+	SELECT
+		COUNT(od.order_id) AS order_count ,
+		cd.customer_state
+	FROM
+		Brazilian_Ecommerce_Data.dbo.olist_customers_dataset cd
+	LEFT JOIN
+		Brazilian_Ecommerce_Data.dbo.olist_orders_dataset od
+	ON
+		cd.customer_id = od.customer_id
+	GROUP BY
+		cd.customer_state
+)
+SELECT
+	ops.customer_state,
+	COUNT(od.order_id) AS stolen_orders,
+	ops.order_count AS total_orders,
+	FORMAT(CAST(COUNT(od.order_id) AS FLOAT) / CAST(ops.order_count AS FLOAT),'P') AS '%_of_stolen_orders',
+	ops.order_count/COUNT(od.order_id) AS '1_stolen_order_for_each'
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_order_reviews_dataset rd
+LEFT JOIN
+	Brazilian_Ecommerce_Data.dbo.olist_orders_dataset od
+ON
+	rd.order_id = od.order_id
+LEFT JOIN
+	Brazilian_Ecommerce_Data.dbo.olist_customers_dataset cd
+ON
+	cd.customer_id = od.customer_id
+INNER JOIN
+	cte_orders_per_state ops
+ON
+	cd.customer_state = ops.customer_state
+WHERE
+	rd.review_comment_message LIKE '%roub%' 
+	OR rd.review_comment_message LIKE '%assal%' 
+	AND rd.review_comment_message IS NOT NULL
+	AND od.order_id NOT IN ('14be6c27cfb9d577528738b7bb45139e','a5a854651cfe0d8da9f1669266fd4063')
+GROUP BY
+	--cd.customer_city,
+	ops.customer_state,
+	ops.order_count
+ORDER BY
+	FORMAT(CAST(COUNT(od.order_id) AS FLOAT) / CAST(ops.order_count AS FLOAT),'P') DESC
 
 --***********************************************************************************************************************************
 -- In how many installments custmers usually pay?
