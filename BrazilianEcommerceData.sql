@@ -232,3 +232,30 @@ HAVING
 	AVG(oid.freight_value) > 0
 ORDER BY
 	AVG(oid.freight_value) DESC
+
+--***********************************************************************************************************************************
+-- Counting orders purchased per review_score
+--***********************************************************************************************************************************
+SELECT
+	COUNT(order_id) AS order_count,
+	FORMAT(CAST(COUNT(order_id) AS FLOAT)/(SELECT CAST(COUNT(order_id) AS FLOAT) FROM Brazilian_Ecommerce_Data.dbo.olist_order_reviews_dataset),'P') AS '%ofTotal',
+	review_score
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_order_reviews_dataset
+GROUP BY
+	review_score
+ORDER BY
+	review_score DESC
+
+--***********************************************************************************************************************************
+-- Time difference between revew creation and review answer per review_score
+--***********************************************************************************************************************************
+SELECT
+	AVG(DATEDIFF(DAY, review_creation_date, review_answer_timestamp)) AS avg_anwer_days,
+	review_score
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_order_reviews_dataset
+GROUP BY
+	review_score
+ORDER BY
+	review_score DESC
