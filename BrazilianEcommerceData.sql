@@ -16,6 +16,12 @@ SELECT
 FROM
 	Brazilian_Ecommerce_Data.dbo.olist_order_reviews_dataset
 
+--About orders
+SELECT
+	DISTINCT order_status
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_orders_dataset
+
 
 --***********************************************************************************************************************************
 --How many customers do we have?
@@ -39,6 +45,30 @@ GROUP BY
 	payment_type
 ORDER BY
 	COUNT(payment_type) DESC
+
+--***********************************************************************************************************************************
+-- Customer purchase trend in 2017
+--***********************************************************************************************************************************
+SELECT
+	--order_status
+	--order_purchase_timestamp,
+	DATENAME(MONTH,DATEADD(MONTH, 0, order_purchase_timestamp)) AS order_month_name,
+	MONTH(order_purchase_timestamp) AS order_month_number,
+	YEAR(order_purchase_timestamp) AS order_year,
+		COUNT(order_id) AS order_count
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_orders_dataset
+WHERE
+	YEAR(order_purchase_timestamp) = 2017
+	AND order_status NOT IN ('cancelled', 'unavailable')
+GROUP BY
+	DATENAME(MONTH,DATEADD(MONTH, 0, order_purchase_timestamp)),
+	MONTH(order_purchase_timestamp),
+	YEAR(order_purchase_timestamp)
+ORDER BY
+	YEAR(order_purchase_timestamp),
+	MONTH(order_purchase_timestamp) ASC
+
 --***********************************************************************************************************************************
 -- How many orders have complains about stolen orders?
 --***********************************************************************************************************************************
