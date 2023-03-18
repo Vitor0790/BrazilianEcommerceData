@@ -18,10 +18,21 @@ FROM
 
 --About orders
 SELECT
-	DISTINCT order_status
+	*
 FROM
 	Brazilian_Ecommerce_Data.dbo.olist_orders_dataset
 
+--About order items
+SELECT
+	*
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_order_items_dataset
+
+--About order payment
+SELECT
+	*
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_order_payments_dataset
 
 --***********************************************************************************************************************************
 --How many customers do we have?
@@ -50,12 +61,9 @@ ORDER BY
 -- Customer purchase trend in 2017
 --***********************************************************************************************************************************
 SELECT
-	--order_status
-	--order_purchase_timestamp,
-	DATENAME(MONTH,DATEADD(MONTH, 0, order_purchase_timestamp)) AS order_month_name,
 	MONTH(order_purchase_timestamp) AS order_month_number,
-	YEAR(order_purchase_timestamp) AS order_year,
-		COUNT(order_id) AS order_count
+	DATENAME(MONTH,DATEADD(MONTH, 0, order_purchase_timestamp)) AS order_month_name,
+	COUNT(order_id) AS order_count_2017
 FROM
 	Brazilian_Ecommerce_Data.dbo.olist_orders_dataset
 WHERE
@@ -248,10 +256,10 @@ ORDER BY
 	review_score DESC
 
 --***********************************************************************************************************************************
--- Time difference between revew creation and review answer per review_score
+-- Time difference between review creation and review answer per review_score
 --***********************************************************************************************************************************
 SELECT
-	AVG(DATEDIFF(DAY, review_creation_date, review_answer_timestamp)) AS avg_anwer_days,
+	AVG(DATEDIFF(DAY, review_creation_date, review_answer_timestamp)) AS avg_asnwer_days,
 	review_score
 FROM
 	Brazilian_Ecommerce_Data.dbo.olist_order_reviews_dataset
@@ -259,3 +267,39 @@ GROUP BY
 	review_score
 ORDER BY
 	review_score DESC
+
+--***********************************************************************************************************************************
+-- Cities with highest revenue
+--***********************************************************************************************************************************
+WITH cte_payments AS (
+	SELECT DISTINCT
+		order_id,
+		SUM(payment_value) AS payment_value
+	FROM
+		Brazilian_Ecommerce_Data.dbo.olist_order_payments_dataset
+	GROUP BY
+		order_id
+)
+
+SELECT
+	COUNT(od.order_id) AS order_count,
+	ROUND(SUM(p.payment_value),2) AS total_customer_payment,
+	cd.customer_state,
+	cd.customer_city
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_customers_dataset cd
+LEFT JOIN
+	Brazilian_Ecommerce_Data.dbo.olist_orders_dataset od
+ON
+	cd.customer_id = od.customer_id
+LEFT JOIN
+	cte_payments p
+ON
+	od.order_id = p.order_id
+WHERE
+	od.order_status = 'delivered'
+GROUP BY
+	cd.customer_state,
+	cd.customer_city
+ORDER BY
+	COUNT(od.order_id) DESC
