@@ -4,6 +4,12 @@ SELECT
 FROM
 	Brazilian_Ecommerce_Data.dbo.olist_customers_dataset
 
+--About sellers
+SELECT
+	*
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_sellers_dataset
+
 --About payments
 SELECT
 	*
@@ -27,6 +33,7 @@ SELECT
 	*
 FROM
 	Brazilian_Ecommerce_Data.dbo.olist_order_items_dataset
+
 
 --About order payment
 SELECT
@@ -303,3 +310,143 @@ GROUP BY
 	cd.customer_city
 ORDER BY
 	COUNT(od.order_id) DESC
+
+--***********************************************************************************************************************************
+-- Sellers with most unique orders, most 5 star rating, highest profit:
+--***********************************************************************************************************************************
+SELECT 
+	description, 
+	seller_id, 
+	value
+FROM(
+	SELECT DISTINCT TOP 1
+		'Seller with most of unique orders :' AS description,
+		oid.seller_id AS seller_id,
+		COUNT(od.order_id) AS value
+	FROM
+		Brazilian_Ecommerce_Data.dbo.olist_orders_dataset od
+	JOIN
+		Brazilian_Ecommerce_Data.dbo.olist_order_items_dataset  oid
+	ON
+		od.order_id = oid.order_id
+	WHERE
+		od.order_status = 'delivered'
+		AND oid.order_item_id = 1
+	GROUP BY
+		oid.seller_id
+	ORDER BY
+		COUNT(od.order_id) DESC
+) first
+
+UNION ALL
+
+SELECT 
+	description, 
+	seller_id, 
+	value
+FROM(
+	SELECT DISTINCT TOP 1
+		'Seller with most 5 star ratings :' AS description,
+		oid.seller_id AS seller_id,
+		COUNT(od.order_id) AS value
+	FROM
+		Brazilian_Ecommerce_Data.dbo.olist_orders_dataset od
+	JOIN
+		Brazilian_Ecommerce_Data.dbo.olist_order_items_dataset  oid
+	ON
+		od.order_id = oid.order_id
+	JOIN
+		Brazilian_Ecommerce_Data.dbo.olist_order_reviews_dataset rd
+	ON
+		od.order_id = rd.order_id
+	WHERE
+		od.order_status = 'delivered'
+		AND oid.order_item_id = 1
+		AND rd.review_score = 5
+	GROUP BY
+		oid.seller_id
+	ORDER BY
+		COUNT(od.order_id) DESC
+) second
+
+UNION ALL
+
+SELECT 
+	description, 
+	seller_id, 
+	ROUND(value,2) AS value
+FROM(
+	SELECT DISTINCT TOP 1
+		'Seller with highest Profit :' AS description,
+		oid.seller_id AS seller_id,
+		SUM(opd.payment_value) AS value
+	FROM
+		Brazilian_Ecommerce_Data.dbo.olist_orders_dataset od
+	JOIN
+		Brazilian_Ecommerce_Data.dbo.olist_order_items_dataset  oid
+	ON
+		od.order_id = oid.order_id
+	JOIN
+		Brazilian_Ecommerce_Data.dbo.olist_order_payments_dataset opd
+	ON
+		od.order_id = opd.order_id
+	WHERE
+		od.order_status = 'delivered'
+		AND oid.order_item_id = 1
+	GROUP BY
+		oid.seller_id
+	ORDER BY
+		SUM(opd.payment_value) DESC
+) third
+
+--***********************************************************************************************************************************
+-- Measuring delivery success rate per state
+--***********************************************************************************************************************************
+
+--About customers
+SELECT DISTINCT
+	customer_state
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_customers_dataset
+
+--About orders
+SELECT
+	distinct
+	order_status
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_orders_dataset
+
+
+SELECT
+	cd.customer_state AS customer_state,
+	--od.order_id,
+	SUM(CASE WHEN
+		od.order_status = 'delivered' THEN 1 ELSE 0
+	END) AS delivered_orders,
+	SUM(CASE WHEN
+		od.order_status != 'delivered' THEN 1 ELSE 0
+	END) AS not_delivered_orders,
+	SUM(CASE WHEN
+		od.order_status IS NOT NULL THEN 1 ELSE 0
+	END) AS total_orders,
+	FORMAT(CAST(SUM(CASE WHEN
+		od.order_status = 'delivered' THEN 1 ELSE 0
+	END) AS FLOAT)/CAST(SUM(CASE WHEN
+		od.order_status IS NOT NULL THEN 1 ELSE 0
+	END) AS FLOAT),'P') AS '%_delivered_orders',
+	FORMAT(CAST(SUM(CASE WHEN
+		od.order_status != 'delivered' THEN 1 ELSE 0
+	END) AS FLOAT)/CAST(SUM(CASE WHEN
+		od.order_status IS NOT NULL THEN 1 ELSE 0
+	END) AS FLOAT), 'P') AS '%_not_delivered_orders'
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_customers_dataset cd
+JOIN
+	Brazilian_Ecommerce_Data.dbo.olist_orders_dataset od
+ON
+	cd.customer_id = od.customer_id
+GROUP BY
+	cd.customer_state
+	--od.order_id
+ORDER BY
+	cd.customer_state
