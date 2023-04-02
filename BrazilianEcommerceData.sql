@@ -402,21 +402,6 @@ FROM(
 --***********************************************************************************************************************************
 -- Measuring delivery success rate per state
 --***********************************************************************************************************************************
-
---About customers
-SELECT DISTINCT
-	customer_state
-FROM
-	Brazilian_Ecommerce_Data.dbo.olist_customers_dataset
-
---About orders
-SELECT
-	distinct
-	order_status
-FROM
-	Brazilian_Ecommerce_Data.dbo.olist_orders_dataset
-
-
 SELECT
 	cd.customer_state AS customer_state,
 	--od.order_id,
@@ -450,3 +435,38 @@ GROUP BY
 	--od.order_id
 ORDER BY
 	cd.customer_state
+
+--***********************************************************************************************************************************
+-- About category quantity and revenue
+--***********************************************************************************************************************************
+WITH cte_payments AS (
+	SELECT DISTINCT
+		order_id,
+		SUM(payment_value) AS revenue
+	FROM
+		Brazilian_Ecommerce_Data.dbo.olist_order_payments_dataset
+	GROUP BY
+		order_id
+)
+
+SELECT
+	CASE 
+		WHEN pd.product_category_name = 'eletrodomesticos_2' THEN 'eletrodomesticos'
+		WHEN pd.product_category_name = 'casa_conforto_2' THEN 'casa_conforto'
+	ELSE
+		pd.product_category_name
+	END AS product_category_name,
+	COUNT(oid.order_id) AS order_count,
+	ROUND(SUM(p.revenue),2) AS total_revenue
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_order_items_dataset oid
+LEFT JOIN
+	Brazilian_Ecommerce_Data.dbo.olist_products_dataset pd
+ON
+	oid.product_id	= pd.product_id
+JOIN
+	cte_payments p
+ON
+	oid.order_id = p.order_id
+GROUP BY
+	pd.product_category_name
