@@ -1,54 +1,101 @@
 --About customers
-SELECT
+SELECT TOP 10
 	*
 FROM
 	Brazilian_Ecommerce_Data.dbo.olist_customers_dataset
 
---About sellers
-SELECT
+--About geolocation
+SELECT TOP 10
 	*
 FROM
-	Brazilian_Ecommerce_Data.dbo.olist_sellers_dataset
+	Brazilian_Ecommerce_Data.dbo.olist_geolocation_dataset
+
+--About order items
+SELECT TOP 10
+	*
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_order_items_dataset
 
 --About payments
-SELECT
+SELECT TOP 10
 	*
 FROM
 	Brazilian_Ecommerce_Data.dbo.olist_order_payments_dataset
 
 --About reviews
-SELECT
+SELECT TOP 10
 	*
 FROM
 	Brazilian_Ecommerce_Data.dbo.olist_order_reviews_dataset
 
 --About orders
-SELECT
+SELECT TOP 10
 	*
 FROM
 	Brazilian_Ecommerce_Data.dbo.olist_orders_dataset
 
---About order items
-SELECT
+--About products
+SELECT TOP 10
 	*
 FROM
-	Brazilian_Ecommerce_Data.dbo.olist_order_items_dataset
+	Brazilian_Ecommerce_Data.dbo.olist_products_dataset
 
-
---About order payment
-SELECT
+--About sellers
+SELECT TOP 10
 	*
 FROM
-	Brazilian_Ecommerce_Data.dbo.olist_order_payments_dataset
+	Brazilian_Ecommerce_Data.dbo.olist_sellers_dataset
+
+--About order category name translation
+SELECT TOP 10
+	*
+FROM
+	Brazilian_Ecommerce_Data.dbo.product_category_name_translation
 
 --***********************************************************************************************************************************
 --How many customers do we have?
 --***********************************************************************************************************************************
+WITH cte_customer AS (
+	SELECT
+		DISTINCT
+		customer_unique_id
+	FROM
+		Brazilian_Ecommerce_Data.dbo.olist_customers_dataset
+)
 SELECT
-	DISTINCT
-	COUNT(customer_id) as CustomerCount
+	COUNT(customer_unique_id) AS customer_count
 FROM
-	Brazilian_Ecommerce_Data.dbo.olist_customers_dataset
+	cte_customer
+
+--***********************************************************************************************************************************
+--Counting how many orders we have by order status
+--***********************************************************************************************************************************
+
+SELECT
+	order_status,
+	COUNT(DISTINCT order_id) AS order_count
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_orders_dataset
+GROUP BY
+	order_status
+ORDER BY
+	COUNT(DISTINCT order_id) DESC
+
+--***********************************************************************************************************************************
+--Checking how much from GMV was delivered
+--***********************************************************************************************************************************
+SELECT
+	od.order_status,
+	ROUND(SUM(oid.price),2) AS GMV
+FROM
+	Brazilian_Ecommerce_Data.dbo.olist_order_items_dataset oid
+JOIN
+	Brazilian_Ecommerce_Data.dbo.olist_orders_dataset od
+ON
+	oid.order_id = od.order_id
+GROUP BY
+	od.order_status
+
 
 --***********************************************************************************************************************************
 -- Which payment method is used more often?
@@ -175,24 +222,30 @@ GROUP BY
 --***********************************************************************************************************************************
 -- Which state of Brazil has more customers?
 --***********************************************************************************************************************************
+WITH cte_customer AS (
+	SELECT
+		DISTINCT
+		customer_unique_id,
+		customer_state
+	FROM
+		Brazilian_Ecommerce_Data.dbo.olist_customers_dataset
+)
 SELECT
-	DISTINCT
-	COUNT(customer_id) as CustomerCount
-	,customer_state
-	,FORMAT(CAST(COUNT(*) AS FLOAT)/CAST((SELECT DISTINCT COUNT(customer_id) FROM Brazilian_Ecommerce_Data.dbo.olist_customers_dataset) AS FLOAT),'P') AS '%ofTotal'
+	customer_state,
+	COUNT(customer_unique_id) AS customer_count
 FROM
-	Brazilian_Ecommerce_Data.dbo.olist_customers_dataset
+	cte_customer
 GROUP BY
 	customer_state
-ORDER BY
-	COUNT(customer_id) DESC
+
 
 --***********************************************************************************************************************************
 -- Which state of Brazil has more orders?
 --***********************************************************************************************************************************
 SELECT
-	FORMAT(CAST(COUNT(od.order_id) AS FLOAT)/CAST((SELECT COUNT(order_id) FROM Brazilian_Ecommerce_Data.dbo.olist_orders_dataset) AS FLOAT),'P') AS '%ofTotal' ,
-	cd.customer_state
+	cd.customer_state,
+	COUNT(od.order_id) AS order_count,
+	FORMAT(CAST(COUNT(od.order_id) AS FLOAT)/CAST((SELECT COUNT(order_id) FROM Brazilian_Ecommerce_Data.dbo.olist_orders_dataset) AS FLOAT),'P') AS '%ofTotal' 
 FROM
 	Brazilian_Ecommerce_Data.dbo.olist_customers_dataset cd
 LEFT JOIN
@@ -226,7 +279,7 @@ ORDER BY
 --***********************************************************************************************************************************
 -- Which city of Brazil has higher freight_value?
 --***********************************************************************************************************************************
-SELECT
+SELECT TOP 3
 	cd.customer_city,
 	cd.customer_state,
 	ROUND(AVG(oid.freight_value),2) AS avg_freight_value
@@ -252,9 +305,9 @@ ORDER BY
 -- Counting orders purchased per review_score
 --***********************************************************************************************************************************
 SELECT
+	review_score,
 	COUNT(order_id) AS order_count,
-	FORMAT(CAST(COUNT(order_id) AS FLOAT)/(SELECT CAST(COUNT(order_id) AS FLOAT) FROM Brazilian_Ecommerce_Data.dbo.olist_order_reviews_dataset),'P') AS '%ofTotal',
-	review_score
+	FORMAT(CAST(COUNT(order_id) AS FLOAT)/(SELECT CAST(COUNT(order_id) AS FLOAT) FROM Brazilian_Ecommerce_Data.dbo.olist_order_reviews_dataset),'P') AS '%ofTotal'
 FROM
 	Brazilian_Ecommerce_Data.dbo.olist_order_reviews_dataset
 GROUP BY
@@ -288,11 +341,11 @@ WITH cte_payments AS (
 		order_id
 )
 
-SELECT
-	COUNT(od.order_id) AS order_count,
-	ROUND(SUM(p.payment_value),2) AS total_customer_payment,
+SELECT TOP 3
 	cd.customer_state,
-	cd.customer_city
+	cd.customer_city,
+	COUNT(od.order_id) AS order_count,
+	ROUND(SUM(p.payment_value),2) AS total_customer_payment
 FROM
 	Brazilian_Ecommerce_Data.dbo.olist_customers_dataset cd
 LEFT JOIN
